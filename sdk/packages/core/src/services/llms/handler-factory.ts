@@ -118,11 +118,16 @@ export function resolveKnownModelsFromConfig(
 	//  - `modelInfo` is an explicit per-model override (the VS Code path);
 	//    it wins over the generic limit.
 	const configuredContextWindow = readPositiveInteger(pc?.maxInputTokens);
+	const configuredMaxOutputTokens = readPositiveInteger(pc?.maxOutputTokens);
 	const modelInfo =
 		pc?.modelInfo && pc.modelInfo.id === config.modelId
 			? pc.modelInfo
 			: undefined;
-	if (configuredContextWindow === undefined && !modelInfo) {
+	if (
+		configuredContextWindow === undefined &&
+		configuredMaxOutputTokens === undefined &&
+		!modelInfo
+	) {
 		return knownModels;
 	}
 	return {
@@ -134,6 +139,9 @@ export function resolveKnownModelsFromConfig(
 						contextWindow: configuredContextWindow,
 						maxInputTokens: configuredContextWindow,
 					}
+				: {}),
+			...(configuredMaxOutputTokens !== undefined
+				? { maxTokens: configuredMaxOutputTokens }
 				: {}),
 			...modelInfo,
 			id: config.modelId,

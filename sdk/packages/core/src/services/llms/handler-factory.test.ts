@@ -224,6 +224,46 @@ describe("createAgentModelFromConfig", () => {
 		});
 	});
 
+	it("preserves custom max tokens for models absent from the built-in catalog", async () => {
+		const { createAgentModelFromConfig } = await import("./handler-factory");
+
+		createAgentModelFromConfig(
+			{
+				providerId: "alibaba-cn",
+				modelId: "qwen4-max",
+				apiKey: "test-key",
+				systemPrompt: "",
+				tools: [],
+				providerConfig: {
+					providerId: "alibaba-cn",
+					modelId: "qwen4-max",
+					maxInputTokens: 256_000,
+					maxOutputTokens: 200_000,
+					knownModels: {},
+				},
+			} satisfies AgentConfig,
+			undefined,
+		);
+
+		const gatewayConfig = (
+			gatewayMock.createGateway.mock.calls as unknown as Array<
+				[
+					{
+						providerConfigs: Array<{
+							models: Array<Record<string, unknown>>;
+						}>;
+					},
+				]
+			>
+		)[0][0];
+		expect(gatewayConfig.providerConfigs[0].models[0]).toMatchObject({
+			id: "qwen4-max",
+			contextWindow: 256_000,
+			maxInputTokens: 256_000,
+			maxOutputTokens: 200_000,
+		});
+	});
+
 	it("uses explicit per-turn max tokens and temperature for gateway request limits", async () => {
 		const { createAgentModelFromConfig } = await import("./handler-factory");
 
