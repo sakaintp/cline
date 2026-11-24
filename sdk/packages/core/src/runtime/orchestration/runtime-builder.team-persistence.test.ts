@@ -315,4 +315,42 @@ describe("DefaultRuntimeBuilder team persistence boundary", () => {
 			}),
 		);
 	});
+
+	it("uses stored provider credentials for delegated agents", async () => {
+		const { DefaultRuntimeBuilder } = await import("./runtime-builder");
+		const { resolveConnectionProviderConfig } = await import(
+			"../../services/llms/handler-factory"
+		);
+		bootstrapAgentTeamsMock.mockClear();
+
+		await new DefaultRuntimeBuilder().build({
+			config: {
+				providerId: "openai-compatible",
+				modelId: "mock-1",
+				providerConfig: {
+					providerId: "openai-compatible",
+					modelId: "mock-1",
+					apiKey: "stored-key",
+				},
+				systemPrompt: "test",
+				cwd: process.cwd(),
+				enableTools: false,
+				enableSpawnAgent: false,
+				enableAgentTeams: true,
+			},
+		});
+
+		const bootstrapCall = (
+			bootstrapAgentTeamsMock.mock.calls as unknown as Array<[BootstrapCall]>
+		)[0]?.[0];
+		expect(bootstrapCall).toBeDefined();
+		if (!bootstrapCall) throw new Error("Expected teammate bootstrap");
+		const delegatedConfig =
+			bootstrapCall.teammateConfigProvider.getRuntimeConfig() as Parameters<
+				typeof resolveConnectionProviderConfig
+			>[0];
+		expect(resolveConnectionProviderConfig(delegatedConfig).apiKey).toBe(
+			"stored-key",
+		);
+	});
 });
